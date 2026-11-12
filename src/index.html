@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Instruction Explorer — Static POC</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js" defer></script>
+  <script src="./instruction.js" defer></script>
+  <script src="./api-client.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Instruction Explorer home"><span class="brand-mark">I</span><span>Instruction<span class="brand-light"> Explorer</span><small>SHARED FINANCE RECORDS</small></span></a>
+      <div class="header-actions">
+        <a class="button button-quiet" href="./documentation.html">Documentation</a>
+        <span class="storage-indicator"><i></i> Saved in this browser</span>
+        <button class="button button-quiet" id="theme-toggle" type="button">☼ Light</button>
+        <button class="button button-quiet" id="reset-button" type="button">Reset sample data</button>
+      </div>
+    </header>
+    <main>
+      <section class="intro"><div><div class="eyebrow">INSTRUCTION CATALOGUE <span class="eyebrow-line"></span> DEMO WORKSPACE</div><h1>Connect work to finance.</h1><p>Explore mandates, engagements, instructions, clients, and properties.</p></div><button class="button button-primary" id="create-button" type="button">＋ New Instruction</button></section>
+      <aside class="notice" role="note"><span class="notice-icon">i</span><span><strong>Demonstration only.</strong> Records are fictional and stored only in this browser. Party and Asset lookups use configured APIs when available and otherwise show clearly labelled local data. Do not enter confidential information.</span></aside>
+      <section class="workspace">
+        <div class="catalogue panel">
+          <div class="panel-heading"><div><div class="section-kicker">YOUR RECORDS</div><h2>Instruction catalogue</h2></div><span class="count-pill" id="record-count">0</span></div>
+          <label class="search-wrap" for="search-input"><span>⌕</span><input id="search-input" type="search" placeholder="Search reference, client, property…" autocomplete="off"></label>
+          <div class="filter-row"><select id="type-filter"><option value="">All types</option></select><select id="service-filter"><option value="">All service lines</option></select><select id="status-filter"><option value="">Any status</option></select></div>
+          <div class="list-caption"><span>INSTRUCTION</span><span>STATUS</span></div><ul class="instruction-list" id="instruction-list" aria-label="Instructions"></ul>
+          <div class="list-foot"><span class="live-dot"></span><span id="visible-count">0 records</span><span class="foot-divider">·</span><span id="source-indicator">Local demo</span></div>
+        </div>
+        <section class="detail panel" id="detail-panel" aria-live="polite"><div class="detail-empty"><span class="empty-glyph">◈</span><h2>Select an Instruction</h2><p>Choose a record from the catalogue to see its clients, properties, lifecycle, and finance references.</p></div></section>
+      </section>
+      <footer class="page-footer"><span>INSTRUCTION EXPLORER <span class="footer-dot">/</span> STATIC POC</span><span>Party + Asset API adapters · Changes stay in this browser</span></footer>
+    </main>
+  </div>
+  <dialog id="instruction-dialog"><form id="instruction-form" novalidate><div class="dialog-heading"><div><div class="section-kicker">INSTRUCTION WORKFLOW</div><h2 id="dialog-title">New Instruction</h2></div><button class="icon-button" id="close-dialog" type="button">×</button></div><div id="form-feedback" class="form-feedback" role="alert" hidden></div><input id="form-id" type="hidden">
+    <div class="wizard-steps" id="wizard-steps"></div>
+    <section class="wizard-panel active" data-step="0"><div class="wizard-copy"><strong>Select or create the client</strong><span>Choose an existing Party from the Explorer-style catalogue, or create a new local client record.</span></div>
+      <div class="client-mode"><button class="button button-outline client-mode-button active" id="existing-client-mode" type="button">Existing client</button><button class="button button-outline client-mode-button" id="new-client-mode" type="button">＋ Create new client</button></div>
+      <div id="existing-client-panel">
+        <div class="form-grid client-search-grid">
+          <label class="field field-wide">Search clients<input id="party-query" placeholder="Search name, ID, company, or contact"></label>
+          <label class="field">Party type<select id="party-type-filter"><option value="">All types</option><option value="Individual">Individual</option><option value="Company">Company</option><option value="Group">Group</option></select></label>
+          <label class="field">Record status<select id="party-status-filter"><option value="">Any status</option><option>Active</option><option>Inactive</option><option>Archived</option></select></label>
+        </div>
+        <div class="party-explorer-results" id="party-explorer-results"></div>
+        <div class="lookup-status" id="party-status">Local Party catalogue · select a result to populate the client fields.</div>
+        <button class="button button-outline lookup-button" id="party-search" type="button">Search configured Party API</button><div class="lookup-results" id="party-results"></div>
+      </div>
+      <div id="new-client-panel" hidden><div class="section-kicker client-form-heading">NEW CLIENT RECORD</div>
+      <label class="field field-wide">Client name <span class="required">*</span><input id="client-name" placeholder="e.g. Harbour Homes Limited"></label>
+      <label class="field">Party type<select id="party-type"><option>Individual</option><option>Company</option><option>Trust</option></select></label>
+      <label class="field">Record status<select id="party-record-status"><option>Active</option><option>Inactive</option><option>Archived</option></select></label>
+      <div class="client-type-fields" id="individual-client-fields"><label class="field">Given names<input id="client-given"></label><label class="field">Family name<input id="client-family"></label><label class="field">Date of birth<input id="client-dob" type="date"></label><label class="field">Nationality<input id="client-nationality"></label></div>
+      <div class="client-type-fields" id="company-client-fields" hidden><label class="field">Legal name<input id="client-legal-name"></label><label class="field">Trading name<input id="client-trading-name"></label><label class="field">Legal form<input id="client-legal-form" placeholder="Private limited company"></label><label class="field">Registration reference<input id="client-registration"></label><label class="field">Jurisdiction<input id="client-jurisdiction"></label></div>
+      <label class="field">Primary contact <span class="required">*</span><input id="contact-name" placeholder="e.g. Avery Morgan"></label>
+      <label class="field">Contact email<input id="contact-email" type="email" placeholder="contact@example.com"></label>
+      <label class="field">Contact phone<input id="contact-phone" type="tel" placeholder="+44 20 0000 0000"></label>
+      <label class="field field-wide">Invoicing legal entity<input id="legal-entity" placeholder="If different from the client"></label>
+    </div></section>
+    <section class="wizard-panel" data-step="1"><div class="wizard-copy"><strong>Connect the property</strong><span>Attach the primary property or asset to the instruction.</span></div><div class="form-grid">
+      <label class="field field-wide">Primary property / asset lookup<input id="asset-query" placeholder="Search configured Asset API or local fixtures"><button class="button button-outline lookup-button" id="asset-search" type="button">Search Asset</button><div class="lookup-status" id="asset-status"></div><div class="lookup-results" id="asset-results"></div></label>
+      <label class="field field-wide">Address <span class="required">*</span><input id="property-address" required placeholder="e.g. 1 Riverside Way"></label>
+      <label class="field">City / locality <span class="required">*</span><input id="property-city" required placeholder="e.g. Bristol"></label>
+      <label class="field">Postcode <span class="required">*</span><input id="property-postcode" required placeholder="e.g. BS1 4QA"></label>
+      <label class="field">Country <span class="required">*</span><select id="property-country" required><option value="">Select…</option><option>France</option><option>Germany</option><option>Spain</option><option>Poland</option><option>United Kingdom</option><option>Netherlands</option><option>Other</option></select></label>
+      <label class="field">Title number<input id="property-title-number" placeholder="e.g. MX482917"></label>
+      <label class="field">Tenure<select id="property-tenure"><option>Freehold</option><option>Leasehold</option></select></label>
+      <label class="field" id="lease-term-field">Lease term<input id="property-lease-term" placeholder="e.g. 125 years from 2010"></label>
+      <label class="field">Sector<select id="property-sector"><option>Office</option><option>Retail</option><option>Industrial</option><option>Logistics</option><option>Residential</option><option>Land</option><option>Other</option></select></label>
+    </div></section>
+    <section class="wizard-panel" data-step="2"><div class="wizard-copy"><strong>Choose the service line</strong><span>The service line determines whether the record is a Mandate, Engagement, or Instruction.</span></div>
+      <div class="type-grid service-grid" id="service-grid"></div>
+      <div class="form-grid">
+        <label class="field field-wide">Name <span class="required">*</span><input id="form-name" required maxlength="140" placeholder="e.g. Riverside acquisition"></label>
+        <label class="field">Identifier <span class="required">*</span><input id="form-reference" required maxlength="40" placeholder="INS-000005"></label>
+        <label class="field">Derived record type <input id="derived-type" readonly></label>
+        <label class="field">Status <span class="required">*</span><select id="form-status"></select></label>
+        <label class="field hidden-type-select">Service line <select id="form-service"></select></label>
+        <label class="field hidden-type-select">Instruction type <select id="form-type"></select></label>
+      </div>
+    </section>
+    <section class="wizard-panel" data-step="3"><div class="wizard-copy"><strong>Capture service-line details</strong><span id="dynamic-details-sub">Fields change with the selected service line.</span></div><div class="form-grid" id="dynamic-details"></div><div class="form-grid generic-details">
+      <label class="field">Start date <span class="required">*</span><input id="form-start" type="date" required></label>
+      <label class="field">End date<input id="form-end" type="date"></label>
+      <label class="field field-wide">Termination reason<input id="form-termination" maxlength="160" placeholder="Required when Withdrawn"></label>
+    </div></section>
+    <section class="wizard-panel" data-step="4"><div class="wizard-copy"><strong>Commercial terms and assignment</strong><span>Fees, currency, and who handles the instruction.</span></div><div class="form-grid">
+      <label class="field">Fee basis <span class="required">*</span><select id="form-fee-basis" required><option value="">Select…</option><option>Fixed fee</option><option>Hourly rate</option><option>Percentage</option></select></label>
+      <label class="field">Fee amount<input id="form-fee-amount" type="number" min="0" step="0.01" placeholder="e.g. 15000"></label>
+      <label class="field">Currency <span class="required">*</span><select id="form-currency" required><option value="">Select…</option><option>EUR</option><option>GBP</option><option>USD</option><option>PLN</option></select></label>
+      <label class="field">Expected revenue<input id="form-revenue" type="number" min="0" step="0.01" placeholder="e.g. 42000"></label>
+      <label class="field">Owning office <span class="required">*</span><select id="form-office"><option value="">Select…</option><option>London</option><option>Manchester</option><option>Madrid</option><option>Barcelona</option><option>Paris</option><option>Lyon</option><option>Berlin</option><option>Frankfurt</option><option>Warsaw</option><option>Wrocław</option></select></label>
+      <label class="field">Assigned to <span class="required">*</span><select id="form-assigned" required><option value="">Select owning office first…</option></select></label>
+      <label class="field field-wide">Notes<textarea id="form-comments" rows="3" placeholder="Anything exceptional about this matter"></textarea></label>
+    </div></section>
+    <section class="wizard-panel" data-step="5"><div class="wizard-copy"><strong>Review and save</strong><span>Check the required information before saving the Instruction.</span></div><div id="wizard-review" class="wizard-review"></div></section>
+    <div class="dialog-actions"><button class="button button-quiet" id="cancel-dialog" type="button">Cancel</button><div class="wizard-navigation"><button class="button button-quiet" id="wizard-back" type="button">Back</button><button class="button button-primary" id="wizard-next" type="button">Next</button><button class="button button-primary" id="wizard-save" type="submit" hidden>Save Instruction</button></div></div>
+  </form></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
