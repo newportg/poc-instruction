@@ -40,6 +40,22 @@
     try { const saved = JSON.parse(localStorage.getItem(M.STORAGE_KEY)); return Array.isArray(saved) && saved.length ? saved : M.getSampleInstructions(); }
     catch (error) { console.warn("Could not load saved Instructions.", error); return M.getSampleInstructions(); }
   }
+  function syncPartyFields(party) {
+    if (!party) return;
+    $("client-name").value = party.displayName || party.name || "";
+    $("party-type").value = party.type || "Individual";
+    $("party-record-status").value = party.status || "Active";
+    $("client-given").value = party.givenNames || "";
+    $("client-family").value = party.familyName || "";
+    $("client-dob").value = party.dateOfBirth || "";
+    $("client-nationality").value = party.nationality || "";
+    $("client-legal-name").value = party.legalName || "";
+    $("client-trading-name").value = party.tradingName || "";
+    $("client-legal-form").value = party.legalForm || "";
+    $("client-registration").value = party.registrationNumber || "";
+    $("client-jurisdiction").value = party.jurisdiction || "";
+    updateClientTypeFields();
+  }
   function updateLeaseTermVisibility() {
     $("lease-term-field").classList.toggle("lease-term-hidden", $("property-tenure").value !== "Leasehold");
   }
@@ -75,15 +91,8 @@
     $("edit-record").addEventListener("click", () => openDialog(record));
   }
   function renderClientCatalogue() {
-    const query = $("party-query").value.trim().toLocaleLowerCase();
-    const type = $("party-type-filter").value;
-    const status = $("party-status-filter").value;
-    const filtered = clientRecords.filter(party => {
-      const searchable = [party.id, party.displayName, party.name, party.type, party.legalName, party.tradingName, party.registrationNumber, party.contactName].filter(Boolean).join(" ").toLocaleLowerCase();
-      return (!query || searchable.includes(query)) && (!type || party.type === type) && (!status || party.status === status);
-    });
-    $("party-explorer-results").innerHTML = filtered.length ? filtered.map(party => `<button type="button" class="party-result ${selectedParty?.id === party.id ? "selected" : ""}" data-client-id="${escapeHtml(party.id)}"><span class="party-result-icon">${escapeHtml(initials(party.type))}</span><span class="party-result-copy"><strong>${escapeHtml(party.displayName || party.name)}</strong><small>${escapeHtml(party.id)} · ${escapeHtml(party.type)}</small></span><span class="party-result-status">${escapeHtml(party.status)}</span></button>`).join("") : `<div class="lookup-status">No existing clients match these filters.</div>`;
-    document.querySelectorAll("[data-client-id]").forEach(button => button.addEventListener("click", () => selectClient(clientRecords.find(party => party.id === button.dataset.clientId))));
+    const catalogue = $("client-party-catalogue");
+    if (catalogue) { catalogue.parties = clientRecords; catalogue.selectedId = selectedParty?.id || ""; }
   }
   function setClientMode(mode) {
     clientMode = mode;
@@ -95,6 +104,7 @@
     $("contact-name").required = mode === "new";
     if (mode === "new") {
       selectedParty = null;
+      $("client-party-editor").party = null;
       $("client-name").value = ""; $("contact-name").value = ""; $("legal-entity").value = "";
     }
     updateClientTypeFields();
@@ -120,11 +130,14 @@
     $("client-registration").value = party.registrationNumber || "";
     $("client-jurisdiction").value = party.jurisdiction || "";
     updateClientTypeFields();
+    $("client-party-editor").party = party;
     renderClientCatalogue();
   }
   function updateClientTypeFields() {
-    $("individual-client-fields").hidden = $("party-type").value === "Company";
-    $("company-client-fields").hidden = $("party-type").value !== "Company";
+    const individualFields = $("individual-client-fields");
+    const companyFields = $("company-client-fields");
+    if (individualFields) individualFields.hidden = $("party-type").value === "Company";
+    if (companyFields) companyFields.hidden = $("party-type").value !== "Company";
   }
   function renderWizard() {
     document.querySelectorAll(".wizard-panel").forEach(panel => panel.classList.toggle("active", Number(panel.dataset.step) === wizardStep));
@@ -276,11 +289,13 @@
     $("theme-toggle").addEventListener("click", () => { const light = document.documentElement.dataset.theme === "light"; document.documentElement.dataset.theme = light ? "dark" : "light"; $("theme-toggle").textContent = light ? "☼ Light" : "☾ Dark"; });
     $("existing-client-mode").addEventListener("click", () => setClientMode("existing")); $("new-client-mode").addEventListener("click", () => setClientMode("new"));
     ["party-query", "party-type-filter", "party-status-filter"].forEach(id => $(id).addEventListener("input", renderClientCatalogue));
+    $("client-party-catalogue").addEventListener("party-selected", event => selectClient(event.detail.party));
+    $("client-party-editor").addEventListener("party-saved", event => { setClientMode("new"); selectedParty = event.detail.party; clientRecords = [selectedParty, ...clientRecords.filter(item => item.id !== selectedParty.id)]; saveClientRecords(); syncPartyFields(selectedParty); renderClientCatalogue(); $("party-status").textContent = "New client ready to use in this Instruction."; });
     $("party-type").addEventListener("change", updateClientTypeFields);
     $("party-search").addEventListener("click", async () => { $("party-status").textContent = "Searching…"; const result = await InstructionApi.searchParties($("party-query").value, partyFixtures); $("party-status").textContent = result.source; showLookupResults($("party-results"), result.items, item => selectClient({ ...item, displayName: item.name, status: "Active" })); });
     $("asset-search").addEventListener("click", async () => { $("asset-status").textContent = "Searching…"; const result = await InstructionApi.searchAssets($("asset-query").value, assetFixtures); $("asset-status").textContent = result.source; showLookupResults($("asset-results"), result.items, item => { selectedAsset = item; $("asset-query").value = `${item.name} (${item.id})`; $("property-address").value = item.address || $("property-address").value; $("asset-results").innerHTML = ""; }); });
     $("property-tenure").addEventListener("change", updateLeaseTermVisibility);
-    $("instruction-form").addEventListener("submit", event => { event.preventDefault(); if (clientMode === "new") { const clientName = $("client-name").value.trim(); const contactName = $("contact-name").value.trim(); if (!clientName || !contactName) { $("form-feedback").hidden = false; $("form-feedback").textContent = "Enter a client name and primary contact."; return; } const newClient = createClientRecord(); clientRecords = [newClient, ...clientRecords]; saveClientRecords(); selectedParty = newClient; } if (!$("instruction-form").checkValidity()) { $("instruction-form").reportValidity(); return; } const record = collect(); const errors = M.validateInstruction(record, records, editingId); if (errors.length) { $("form-feedback").hidden = false; $("form-feedback").innerHTML = errors.map(escapeHtml).join("<br>"); return; } records = editingId ? records.map(item => item.id === editingId ? record : item) : [record, ...records]; selectedId = record.id; save(); $("instruction-dialog").close(); renderList(); renderDetail(); toast(editingId ? "Instruction updated." : "Instruction created."); });
+    $("instruction-form").addEventListener("submit", event => { event.preventDefault(); if (clientMode === "new" && !selectedParty) { $("form-feedback").hidden = false; $("form-feedback").textContent = "Save the new client before continuing."; return; } if (!$("instruction-form").checkValidity()) { $("instruction-form").reportValidity(); return; } const record = collect(); const errors = M.validateInstruction(record, records, editingId); if (errors.length) { $("form-feedback").hidden = false; $("form-feedback").innerHTML = errors.map(escapeHtml).join("<br>"); return; } records = editingId ? records.map(item => item.id === editingId ? record : item) : [record, ...records]; selectedId = record.id; save(); $("instruction-dialog").close(); renderList(); renderDetail(); toast(editingId ? "Instruction updated." : "Instruction created."); });
     renderClientCatalogue(); updateClientTypeFields(); renderList(); renderDetail();
   }
   function toast(message, error = false) { const element = $("toast"); element.textContent = message; element.className = `toast visible${error ? " error" : ""}`; setTimeout(() => element.classList.remove("visible"), 2800); }

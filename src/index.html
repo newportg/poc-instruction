@@ -7,6 +7,8 @@
   <title>Instruction Explorer — Static POC</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="./config.js" defer></script>
+  <script src="./components/party-model.js" defer></script>
+  <script src="./components/party-components.js" defer></script>
   <script src="./instruction.js" defer></script>
   <script src="./api-client.js" defer></script>
   <script src="./app.js" defer></script>
@@ -48,16 +50,12 @@
           <label class="field">Party type<select id="party-type-filter"><option value="">All types</option><option value="Individual">Individual</option><option value="Company">Company</option><option value="Group">Group</option></select></label>
           <label class="field">Record status<select id="party-status-filter"><option value="">Any status</option><option>Active</option><option>Inactive</option><option>Archived</option></select></label>
         </div>
-        <div class="party-explorer-results" id="party-explorer-results"></div>
+        <poc-party-catalogue id="client-party-catalogue"></poc-party-catalogue>
         <div class="lookup-status" id="party-status">Local Party catalogue · select a result to populate the client fields.</div>
         <button class="button button-outline lookup-button" id="party-search" type="button">Search configured Party API</button><div class="lookup-results" id="party-results"></div>
       </div>
-      <div id="new-client-panel" hidden><div class="section-kicker client-form-heading">NEW CLIENT RECORD</div>
-      <label class="field field-wide">Client name <span class="required">*</span><input id="client-name" placeholder="e.g. Harbour Homes Limited"></label>
-      <label class="field">Party type<select id="party-type"><option>Individual</option><option>Company</option><option>Trust</option></select></label>
-      <label class="field">Record status<select id="party-record-status"><option>Active</option><option>Inactive</option><option>Archived</option></select></label>
-      <div class="client-type-fields" id="individual-client-fields"><label class="field">Given names<input id="client-given"></label><label class="field">Family name<input id="client-family"></label><label class="field">Date of birth<input id="client-dob" type="date"></label><label class="field">Nationality<input id="client-nationality"></label></div>
-      <div class="client-type-fields" id="company-client-fields" hidden><label class="field">Legal name<input id="client-legal-name"></label><label class="field">Trading name<input id="client-trading-name"></label><label class="field">Legal form<input id="client-legal-form" placeholder="Private limited company"></label><label class="field">Registration reference<input id="client-registration"></label><label class="field">Jurisdiction<input id="client-jurisdiction"></label></div>
+      <div id="new-client-panel" hidden><div class="section-kicker client-form-heading">NEW CLIENT RECORD</div><poc-party-editor id="client-party-editor"></poc-party-editor>
+      <div class="component-identity-state" aria-hidden="true"><input id="client-name"><select id="party-type"><option>Individual</option><option>Company</option><option>Group</option></select><select id="party-record-status"><option>Active</option><option>Inactive</option><option>Archived</option></select><input id="client-given"><input id="client-family"><input id="client-dob"><input id="client-nationality"><input id="client-legal-name"><input id="client-trading-name"><input id="client-legal-form"><input id="client-registration"><input id="client-jurisdiction"></div>
       <label class="field">Primary contact <span class="required">*</span><input id="contact-name" placeholder="e.g. Avery Morgan"></label>
       <label class="field">Contact email<input id="contact-email" type="email" placeholder="contact@example.com"></label>
       <label class="field">Contact phone<input id="contact-phone" type="tel" placeholder="+44 20 0000 0000"></label>
